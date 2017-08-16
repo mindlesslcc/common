@@ -5,6 +5,7 @@ const (
 	WARN
 	DEBUG
 	INFO
+	INVALID_LEVEL
 )
 
 type loggerType func() Logger
@@ -18,6 +19,14 @@ type Logger interface {
 
 var loggers = make(map[string]loggerType)
 var logger Logger
+var levelStr = []string{"ERROR", "WARN", "DEBUG", "INFO"}
+
+func Level2Str(level int) string {
+	if level < 0 || level >= INVALID_LEVEL {
+		return ""
+	}
+	return levelStr[level]
+}
 
 func Register(name string, log loggerType) {
 	if log == nil {

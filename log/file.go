@@ -61,7 +61,7 @@ func (w *fileLogWriter) Init(filename string) error {
 		}
 	}
 
-	w.fileWriter, err = os.Open(filename)
+	w.fileWriter, err = os.OpenFile(filename, os.O_WRONLY, 0666)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,6 @@ func (w *fileLogWriter) startLogger() error {
 		case sg := <-w.signalChan:
 			w.Flush()
 			if sg == "close" {
-				w.Destroy()
 				exit = true
 			}
 			w.wg.Done()
@@ -101,7 +100,7 @@ func (w *fileLogWriter) WriteMsg(logLevel int, msg string) error {
 		line = 0
 	}
 	_, filename := path.Split(file)
-	msg = "[" + filename + ":" + strconv.FormatInt(int64(line), 10) + "]" + msg
+	msg = "[" + filename + ":" + strconv.FormatInt(int64(line), 10) + "] " + msg
 	lm := w.logMsgPool.Get().(*logMsg)
 	lm.level = logLevel
 	lm.msg = msg
@@ -122,7 +121,10 @@ func (w *fileLogWriter) Flush() {
 	for {
 		if len(w.msgChan) > 0 {
 			bm := <-w.msgChan
-			w.fileWriter.WriteString(fmt.Sprintf("%s:%d:%s\n", bm.when.String(), bm.level, bm.msg))
+			_, err := w.fileWriter.WriteString(fmt.Sprintf("%s:%s:%s\n", bm.when.String(), Level2Str(bm.level), bm.msg))
+			if err != nil {
+				panic(err)
+			}
 			w.logMsgPool.Put(bm)
 			continue
 		}
